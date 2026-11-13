@@ -24,16 +24,19 @@ const common = {
 
 rmSync("dist-electron", { recursive: true, force: true });
 
+// Saída com extensão .cjs: o package.json do app declara "type": "module",
+// então um arquivo .js seria tratado como ESM pelo Node/Electron e quebraria
+// (o bundle usa require, formato CommonJS). A extensão .cjs força CommonJS.
 await build({
   ...common,
   entryPoints: ["src/main/index.ts"],
-  outfile: "dist-electron/main/index.js",
+  outfile: "dist-electron/main/index.cjs",
 });
 
 await build({
   ...common,
   entryPoints: ["src/main/preload.ts"],
-  outfile: "dist-electron/preload/index.js",
+  outfile: "dist-electron/preload/index.cjs",
 });
 
 console.log("[build-electron] main + preload bundled -> dist-electron/");

@@ -38,7 +38,7 @@ function criarJanela(): void {
     backgroundColor: "#F8FAFC",
     title: "EduGestão — Central de Atendimento Escolar",
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
