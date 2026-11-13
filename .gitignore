@@ -1,0 +1,23 @@
+node_modules/
+dist/
+dist-renderer/
+dist-electron/
+*.log
+.DS_Store
+# Dados sensíveis (PII de alunos/docentes, DB local, credenciais) nunca versionados
+*.sqlite
+*.sqlite3
+*.db
+data/
+userData/
+config.json
+.env
+.env.*
+# Planilhas e PDFs de importação (contêm PII)
+imports/
+*.xlsx
+*.csv
+# Artefatos de teste local
+.smoke/
+.smoke-build/
+smoke-tmp.mjs

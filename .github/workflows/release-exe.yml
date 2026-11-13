@@ -1,0 +1,53 @@
+name: Build Windows EXE
+
+# Empacota o app no runner windows-latest (electron-builder → NSIS + portable).
+# O empacotamento Windows NÃO roda no gateway do agente: apenas o
+# github-actions[bot] consegue anexar assets de release.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer + main
+        run: npm run build
+
+      - name: Package Windows (NSIS + portable)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis portable --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: EduGestao-Windows
+          path: |
+            dist/*.exe
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          fail_on_unmatched_files: true
+          token: ${{ secrets.GITHUB_TOKEN }}
