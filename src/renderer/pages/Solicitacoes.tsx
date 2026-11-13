@@ -14,7 +14,7 @@ const SETORES: (Setor | "Todos")[] = [
   "Todos", "Secretaria Escolar", "Coordenação Pedagógica", "Administração", "Direção Escolar",
 ];
 
-export function Solicitacoes({ onMudou }: { onMudou: () => void }) {
+export function Solicitacoes({ onMudou, refreshSignal = 0 }: { onMudou: () => void; refreshSignal?: number }) {
   const [lista, setLista] = useState<Solicitacao[]>([]);
   const [fStatus, setFStatus] = useState<(typeof STATUS)[number]>("Todas");
   const [fSetor, setFSetor] = useState<(typeof SETORES)[number]>("Todos");
@@ -29,7 +29,7 @@ export function Solicitacoes({ onMudou }: { onMudou: () => void }) {
       if (selId === null && r.length) setSelId(r[0].id);
     });
   };
-  useEffect(carregar, [fStatus, fSetor]);
+  useEffect(carregar, [fStatus, fSetor, refreshSignal]);
 
   return (
     <div className="flex h-full flex-col gap-4">

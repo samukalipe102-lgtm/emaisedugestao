@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar, type Rota } from "./components/Sidebar";
 import { Painel } from "./pages/Painel";
 import { Solicitacoes } from "./pages/Solicitacoes";
@@ -18,9 +18,13 @@ export function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [badges, setBadges] = useState({ solicitacoes: 0, revisao: 0 });
   const [modelosAberto, setModelosAberto] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // Sinal de refresh NÃO destrutivo: as páginas observam este número e
+  // recarregam seus dados sem serem desmontadas (evita piscar/perder foco).
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
-  const atualizarTudo = useCallback(() => {
+  // Atualiza apenas o enxoval do shell (status + badges + config). NÃO remonta
+  // a página ativa, para a digitação nos formulários não ser interrompida.
+  const atualizarShell = useCallback(() => {
     window.edu.getStatus().then(setStatus);
     window.edu.obterConfig().then(setConfig);
     window.edu.listarSolicitacoes().then((s) =>
@@ -32,26 +36,44 @@ export function App() {
     window.edu.listarRevisao().then((r) => setBadges((b) => ({ ...b, revisao: r.length })));
   }, []);
 
-  useEffect(atualizarTudo, [atualizarTudo]);
-  // status a cada 1s para o cronômetro; demais via push + polling leve
-  useIntervalo(() => window.edu.getStatus().then(setStatus), 1000);
-  useAtualizacao(() => { atualizarTudo(); setRefreshKey((k) => k + 1); });
+  useEffect(() => { atualizarShell(); }, [atualizarShell]);
 
-  const forcarRefresh = () => { atualizarTudo(); setRefreshKey((k) => k + 1); };
+  // Cronômetro: só o status a cada 1s. É um objeto pequeno; a animação MM:SS
+  // é feita localmente pelo hook useCountdown, então isto não causa flicker.
+  useIntervalo(() => window.edu.getStatus().then(setStatus), 1000);
+
+  // Push do processo principal (e-mail recebido/enviado etc.): atualiza o shell
+  // e incrementa o sinal com throttle, para as páginas recarregarem os dados
+  // sem remontar. Throttle evita um re-fetch por segundo vindo do tick.
+  const ultimoSinal = useRef(0);
+  useAtualizacao(() => {
+    atualizarShell();
+    const agora = Date.now();
+    if (agora - ultimoSinal.current > 1500) {
+      ultimoSinal.current = agora;
+      setRefreshSignal((k) => k + 1);
+    }
+  });
+
+  // Chamado por ações do usuário dentro das páginas (responder, aprovar…).
+  const forcarRefresh = useCallback(() => {
+    atualizarShell();
+    setRefreshSignal((k) => k + 1);
+  }, [atualizarShell]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
       <Sidebar rota={rota} onNavegar={setRota} badges={badges} status={status} config={config} />
-      <main className="flex-1 overflow-auto p-6" key={refreshKey}>
+      <main className="flex-1 overflow-auto p-6">
         {rota === "painel" && <Painel status={status} />}
-        {rota === "solicitacoes" && <Solicitacoes onMudou={forcarRefresh} />}
+        {rota === "solicitacoes" && <Solicitacoes refreshSignal={refreshSignal} onMudou={forcarRefresh} />}
         {rota === "processos" && (
           <Processos
             onVerRecebidos={() => setRota("solicitacoes")}
             onVerModelos={() => setModelosAberto(true)}
           />
         )}
-        {rota === "revisao" && <Revisao onMudou={forcarRefresh} />}
+        {rota === "revisao" && <Revisao refreshSignal={refreshSignal} onMudou={forcarRefresh} />}
         {rota === "base" && <BaseOficial />}
         {rota === "fila" && <Fila status={status} onMudou={forcarRefresh} />}
         {rota === "relatorios" && <Relatorios />}

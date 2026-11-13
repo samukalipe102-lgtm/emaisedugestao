@@ -3,11 +3,11 @@ import type { ItemRevisao } from "@shared/types";
 import { formatarData, badgeClass } from "../lib/ui";
 import { IconCheck } from "../components/icons";
 
-export function Revisao({ onMudou }: { onMudou: () => void }) {
+export function Revisao({ onMudou, refreshSignal = 0 }: { onMudou: () => void; refreshSignal?: number }) {
   const [lista, setLista] = useState<ItemRevisao[]>([]);
 
   const carregar = () => { window.edu.listarRevisao().then(setLista); };
-  useEffect(carregar, []);
+  useEffect(carregar, [refreshSignal]);
 
   const aprovar = async (id: number) => {
     await window.edu.aprovarRevisao(id);
